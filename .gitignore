@@ -1,0 +1,47 @@
+# === Rust-specific ===
+/target
+**/*.rs.bk
+
+# === Cargo package manager ===
+Cargo.lock    # Optional if you're making a library
+/.cargo/
+
+# === Build artifacts ===
+*.rlib
+*.rmeta
+*.d
+*.o
+*.so
+*.a
+*.dll
+*.exe
+
+# === Debugging/profiling ===
+*.dSYM/
+*.profraw
+*.profdata
+*.gcno
+*.gcda
+*.gcov
+
+# === Editor/IDE files ===
+# VSCode
+.vscode/
+/.vscode/*
+
+# JetBrains (CLion, IntelliJ)
+.idea/
+
+# Sublime
+*.sublime-project
+*.sublime-workspace
+
+# === OS trash ===
+.DS_Store
+Thumbs.db
+
+# === Logs and misc ===
+*.log
+*.tmp
+*.swp
+output.txt

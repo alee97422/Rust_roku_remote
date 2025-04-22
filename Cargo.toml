@@ -1,0 +1,12 @@
+[package]
+name = "hello_egui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.26"
+egui = "0.26"
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+regex = "1"
+url = "2.5.4"
+html-escape = "0.2"
