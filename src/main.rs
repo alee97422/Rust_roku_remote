@@ -21,12 +21,20 @@ struct AppEntry {
     id: String,
     name: String,
 }
+
 // establish a list of roku commands
-const ROKU_COMMANDS: &[&str] = &[
-    "Home", "Reverse", "Forward", "Play", "Select", "Left", "Right", "Down", "Up", "Back",
-    "Replay", "Info", "Backspace", "Search", "Enter", "Find_remote",
-    "VolumeDown", "VolumeUp", "VolumeMute", "Channel_up", "Channel_down",
-    "Power", "Poweroff", "Poweron"
+const ROKU_COMMANDS: &[&[&str]] = &[
+    &["Power", "Poweron", "Poweroff"],
+    &["Home", "Info", "Back"],
+    &[" ", " ", " "],
+    &[" ", "Up", " "],
+    &["Left", "Select", "Right"],
+    &[" ", "Down", " "],
+    &[" ", " ", "Play"],
+    &["VolumeUp", "VolumeDown", "VolumeMute"],
+    &["Channel_up", "Channel_down", "Search"],
+    &["Enter", "Backspace", "Find_remote"],
+    &["Replay", "Reverse", "Forward"],
 ];
 // app
 fn main() -> Result<(), eframe::Error> {
@@ -73,14 +81,34 @@ impl EApp for RokuRemoteApp {
                 ui.label("Commands:");
 
                 if let Some(ip) = &self.selected_device {
-                    ui.horizontal_wrapped(|ui| {
-                        for &cmd in ROKU_COMMANDS {
-                            if ui.button(cmd).clicked() {
-                                send_command(ip, cmd);
-                                self.last_msg = format!("Sent command: {}", cmd);
+                    egui::Grid::new("commands_grid")
+                        .num_columns(3)
+                        .min_col_width(100.0) 
+                        .spacing([10.0, 10.0]) 
+                        .show(ui, |ui| {
+                            for row in ROKU_COMMANDS {
+                                for &cmd in *row {
+                                    if cmd != " " {
+                                        // Create a fixed-size button with centered text
+                                        ui.allocate_ui(egui::vec2(60.0, 20.0), |ui| {
+                                            ui.with_layout(
+                                                egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+                                                |ui| {
+                                                    if ui.button(cmd).clicked() {
+                                                        send_command(ip, cmd);
+                                                        self.last_msg = format!("Sent command: {}", cmd);
+                                                    }
+                                                },
+                                            );
+                                        });
+                                    } else {
+                                        
+                                        ui.label("");
+                                    }
+                                }
+                                ui.end_row();
                             }
-                        }
-                    });
+                        });
 
                     ui.separator();
                     ui.label("Send Text Input:");
@@ -101,7 +129,17 @@ impl EApp for RokuRemoteApp {
                 ui.separator();
                 ui.label("Apps:");
                 egui::ComboBox::from_label("Pick an App")
-                    .selected_text(self.selected_app.clone().unwrap_or_else(|| "None".into()))
+                    .selected_text(
+                        self.selected_app
+                            .as_ref()
+                            .and_then(|app_id| {
+                                self.apps
+                                    .iter()
+                                    .find(|app| app.id == *app_id)
+                                    .map(|app| app.name.clone())
+                            })
+                            .unwrap_or_else(|| "None".into()),
+                    )
                     .show_ui(ui, |ui| {
                         for app in &self.apps {
                             if ui
@@ -116,7 +154,13 @@ impl EApp for RokuRemoteApp {
                 if ui.button("Launch App").clicked() {
                     if let (Some(ip), Some(app_id)) = (&self.selected_device, &self.selected_app) {
                         launch_app(ip, app_id);
-                        self.last_msg = format!("Launching app: {}", app_id);
+                        let app_name = self
+                            .apps
+                            .iter()
+                            .find(|app| app.id == *app_id)
+                            .map(|app| app.name.clone())
+                            .unwrap_or_else(|| "Unknown App".to_string());
+                        self.last_msg = format!("Launching app: {}", app_name);
                     }
                 }
             }
@@ -126,7 +170,7 @@ impl EApp for RokuRemoteApp {
         });
     }
 }
-< // discover roku devices on the network using SSDP(simple service discovery protocol)
+// discover roku devices on the network using SSDP(simple service discovery protocol)
 fn discover_roku_devices() -> Vec<String> {
     const SSDP_ADDR: &str = "239.255.255.250";
     const SSDP_PORT: u16 = 1900;
@@ -179,7 +223,7 @@ fn discover_roku_devices() -> Vec<String> {
 
     found
 }
-< // query available apps to create a list and launch apps directly 
+// query available apps to create a list and launch apps directly 
 fn get_apps(ip: &str) -> Vec<AppEntry> {
     let url = format!("http://{}/query/apps", ip);
     let client = Client::new();
@@ -199,18 +243,18 @@ fn get_apps(ip: &str) -> Vec<AppEntry> {
 
     vec![]
 }
-< // form commands and send over the network using http
+// form commands and send over the network using http
 fn send_command(ip: &str, command: &str) {
     let url = format!("http://{}/keypress/{}", ip, command);
     let _ = Client::new().post(&url).send();
 }
-< // launch specific aspps without having to manually navigate to them
+// launch specific apps without having to manually navigate to them
 fn launch_app(ip: &str, app_id: &str) {
     let url = format!("http://{}/launch/{}", ip, app_id);
     let _ = Client::new().post(&url).send();
 }
 // send strings to roku device 
-// the literal function only sends one character at a time 
+// the literal function only sends one character at a time  
 // so for loop 
 fn send_key(ip: &str, key: &str) {
     let client = Client::new();
